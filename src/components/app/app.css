@@ -1,0 +1,9 @@
+@import '~antd/dist/antd.css';
+
+.app {
+    background-color: #E5E5E5;
+    min-height: 1000px;
+}
+.no-internet {
+    padding-top: 50px;
+}
