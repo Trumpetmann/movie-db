@@ -1,9 +1,6 @@
 @import '~antd/dist/antd.css';
 
 .list{
-    max-width: 1010px;
-    min-height: 1000px;
-    background-color: white;
     margin: 0 auto;
     padding: 19px 34px;
     display: flex;

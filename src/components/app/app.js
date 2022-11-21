@@ -2,11 +2,12 @@
 /* eslint-disable no-shadow */
 /* eslint-disable no-await-in-loop */
 import React, { Component } from 'react'
-import { format } from 'date-fns'
 import { Offline, Online } from 'react-detect-offline'
-import { Result } from 'antd'
+import { Result, Pagination } from 'antd'
 import './app.css'
+import { debounce } from 'lodash'
 
+import Header from '../header'
 import List from '../list/list'
 import Spinner from '../spinner'
 import Error from '../error'
@@ -16,17 +17,89 @@ export default class App extends Component {
   movieSearch = new MovieService()
 
   state = {
+    mode: 'popular',
+    currentPage: 1,
     movieList: [],
     loading: true,
     error: false,
+    queryString: '',
   }
 
-  constructor() {
-    super()
-    this.movieSearch
-      .getResource('popular')
-      .then((res) => this.setPopularMovies(res.results))
-      .catch(() => {
+  searchMovie = debounce((e) => {
+    this.setState({
+      loading: true,
+      error: false,
+    })
+    const query = e.target.value
+
+    this.setState({ queryString: query })
+
+    if (!query) {
+      return this.popularList()
+    }
+
+    return this.movieSearch
+      .getResource(query)
+      .then((res) => {
+        this.setState({
+          mode: 'search',
+          movieList: res,
+          loading: false,
+          error: false,
+        })
+      })
+      .catch((e) => {
+        console.log(e)
+        this.setState({
+          loading: false,
+          error: true,
+        })
+      })
+  }, 1000)
+
+  componentDidMount() {
+    this.popularList()
+  }
+
+  changePagination = (e) => {
+    const { mode, queryString } = this.state
+
+    this.setState({
+      loading: true,
+    })
+
+    if (mode === 'popular') {
+      return this.movieSearch
+        .getPopularMovies(e)
+        .then((res) => {
+          this.setState({
+            currentPage: e,
+            mode: 'popular',
+            movieList: res,
+            loading: false,
+          })
+        })
+        .catch((e) => {
+          console.log(e)
+          this.setState({
+            loading: false,
+            error: true,
+          })
+        })
+    }
+    return this.movieSearch
+      .getResource(queryString, e)
+      .then((res) => {
+        this.setState({
+          mode: 'search',
+          currentPage: e,
+          movieList: res,
+          loading: false,
+          error: false,
+        })
+      })
+      .catch((e) => {
+        console.log(e)
         this.setState({
           loading: false,
           error: true,
@@ -34,51 +107,60 @@ export default class App extends Component {
       })
   }
 
-  async setPopularMovies(body) {
-    const images = []
-    const genres = await this.movieSearch.getGenre().then((body) => body.genres)
-
-    for (let i = 0; i < body.length; i++) {
-      const img = await this.movieSearch.getImage(body[i].poster_path)
-      images.push(img)
-    }
-
-    let i = 0
-
-    const movieArr = body.map((el) => {
-      const dramas = el.genre_ids.map((el) => genres.find((x) => x.id === el).name)
-
-      return {
-        id: el.id,
-        name: el.title,
-        drama: dramas,
-        date: format(new Date(el.release_date), 'MMMM dd, yyyy'),
-        description: el.overview,
-        img: images[i++],
-      }
-    })
-    this.setState({
-      movieList: movieArr,
-      loading: false,
-    })
+  popularList() {
+    return this.movieSearch
+      .getPopularMovies()
+      .then((res) => {
+        this.setState({
+          mode: 'popular',
+          movieList: res,
+          loading: false,
+        })
+      })
+      .catch((e) => {
+        console.log(e)
+        this.setState({
+          loading: false,
+          error: true,
+        })
+      })
   }
 
   render() {
-    const { movieList, loading, error } = this.state
+    const { movieList, loading, error, currentPage } = this.state
+
     const errorText = error ? <Error /> : null
     const loader = loading ? <Spinner /> : null
     const list = !loading && !error ? <List movieList={movieList} /> : null
+    const pages = this.movieSearch.totalPage >= 500 ? 500 : this.movieSearch.totalPage
+    const pagination =
+      !loading && !error ? (
+        <div className="pagination">
+          <Pagination
+            showQuickJumper
+            defaultCurrent={currentPage}
+            total={pages * 10}
+            onChange={this.changePagination}
+          />
+        </div>
+      ) : null
+    const noResults = movieList.length === 0 && !loading ? <span className="no-results">No results :(</span> : null
 
     return (
       <div className="app">
-        <Online>
-          {errorText}
-          {list}
-          {loader}
-        </Online>
-        <Offline>
-          <InternetConnection />
-        </Offline>
+        <div className="list-container">
+          <Online>
+            <Header searchMovie={this.searchMovie} />
+            {errorText}
+            {list}
+            {noResults}
+            {loader}
+            {pagination}
+          </Online>
+          <Offline>
+            <InternetConnection />
+          </Offline>
+        </div>
       </div>
     )
   }

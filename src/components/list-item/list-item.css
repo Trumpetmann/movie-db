@@ -1,7 +1,7 @@
 
 .list-item {
     list-style-type: none;
-    max-width: 454px;
+    width: 454px;
     max-height: 281px;
     display: flex;
     font-size: 12px;

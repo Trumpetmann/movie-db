@@ -7,3 +7,19 @@
 .no-internet {
     padding-top: 50px;
 }
+.no-results {
+    display: block;
+    text-align: center;
+    font-size: 40px;
+    font-weight: 600;
+}
+.list-container {
+    max-width: 1010px;
+    min-height: 1000px;
+    background-color: white;
+    margin: 0 auto;
+}
+.pagination {
+    margin: 0 auto;
+    padding: 0 34px 20px;
+}
